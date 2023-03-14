@@ -1,0 +1,19 @@
+[Event "Rated Bullet game"]
+[Site "https://lichess.org/0ET5u4Is"]
+[Date "2023.03.13"]
+[White "thathatha"]
+[Black "bubbakill7"]
+[Result "0-1"]
+[UTCDate "2023.03.13"]
+[UTCTime "04:18:03"]
+[WhiteElo "1723"]
+[BlackElo "1692"]
+[WhiteRatingDiff "-6"]
+[BlackRatingDiff "+6"]
+[Variant "Standard"]
+[TimeControl "60+0"]
+[ECO "A41"]
+[Termination "Time forfeit"]
+
+1. d4 d6 2. e3 g6 3. Nc3 Bg7 4. Bd2 Nf6 5. Qe2 O-O 6. O-O-O Re8 7. Nf3 Nc6 8. Ne1 e5 9. Nd3 e4 10. Ne1 Be6 11. Kb1 a5 12. f3 Na7 13. fxe4 c6 14. e5 dxe5 15. dxe5 Nd5 16. Nf3 Nxc3+ 17. Bxc3 a4 18. Rxd8 Rexd8 19. g3 a3 20. Bg2 Nb5 21. Rd1 Nxc3+ 22. bxc3 Rdb8 23. Nd4 Bd7 24. Be4 f5 25. Bd3 Bxe5 26. Rd2 Bxd4 27. Kc1 Ra5 28. exd4 Rd5 29. Kd1 Rd8 30. Ke1 Bc8 31. Kf2 Re8 0-1
+

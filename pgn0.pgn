@@ -1,0 +1,19 @@
+[Event "Rated Bullet game"]
+[Site "https://lichess.org/MkMfTda4"]
+[Date "2023.03.14"]
+[White "bubbakill7"]
+[Black "RogerCuentas_Unap"]
+[Result "0-1"]
+[UTCDate "2023.03.14"]
+[UTCTime "03:42:24"]
+[WhiteElo "1692"]
+[BlackElo "1679"]
+[WhiteRatingDiff "-5"]
+[BlackRatingDiff "+6"]
+[Variant "Standard"]
+[TimeControl "60+0"]
+[ECO "C00"]
+[Termination "Normal"]
+
+1. e4 e6 2. f4 d5 3. e5 c5 4. Nf3 Nc6 5. Nc3 b6 6. d4 cxd4 7. Nxd4 Nxd4 8. Qxd4 Bc5 9. Qd3 a5 10. Be3 Ba6 11. Qd2 Bxf1 12. Rxf1 Bxe3 13. Qxe3 Qe7 14. Qxb6 Nh6 15. O-O-O O-O 16. Qf2 Nf5 17. g4 Nh6 18. Rg1 Rab8 19. g5 Nf5 20. h4 d4 21. Ne4 Ne3 22. Rde1 Qb4 23. Rxe3 Qxb2+ 24. Kd2 dxe3+ 25. Qxe3 Qxa2 26. Nf6+ gxf6 27. gxf6+ Kh8 28. Qg3 Rfd8+ 29. Ke3 Qa3+ 30. Kf2 Qxg3+ 31. Rxg3 Rd2+ 32. Ke3 Rxc2 33. Ke4 Rc4+ 34. Kd3 Rbb4 35. Rf3 Rd4+ 36. Ke3 Re4+ 37. Kf2 Rbd4 38. Kg2 Rd2+ 39. Kg3 Red4 40. Kg4 R2d3 41. Kg5 Rxf3 42. h5 Rfxf4 43. h6 Rg4+ 44. Kh5 Rh4+ 45. Kg5 Rdg4# 0-1
+
