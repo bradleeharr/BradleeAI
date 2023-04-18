@@ -24,10 +24,10 @@ def main():
         display.check_for_quit()
         display.update(board.fen(), game_board)
         white = (board.turn is chess.WHITE)
-        next_move, _ = getNextMove(3, board, white)
+        next_move, _ = getNextMove(2, board, white)
         print(next_move)
         board.push(next_move)
-        time.sleep(1)
+        time.sleep(0.1);
 
     display.terminate()
 
