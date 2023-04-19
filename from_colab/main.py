@@ -1,6 +1,9 @@
 from neural_network_model import *
 from utilities import *
 import os
+import wandb
+from pytorch_lightning.loggers.wandb import WandbLogger
+from pytorch_lightning.callbacks import EarlyStopping, LearningRateMonitor
 
 
 def train_model():
@@ -14,7 +17,7 @@ def train_model():
         print("Games found")
 
     # Create the early stopping callback
-    early_stopping_callback = EarlyStopping(monitor="validation_loss", min_delta=0.001, patience=250, verbose=True,
+    early_stopping_callback = EarlyStopping(monitor="validation_loss", min_delta=0.001, patience=550, verbose=True,
                                             mode="min")
 
     # Create the learning rate monitor callback
@@ -60,7 +63,7 @@ if __name__ == '__main__':
             'num_hidden': {'max': 150, 'min': 3},
             'lr': {'distribution': 'log_uniform_values', 'max': 2., 'min': 1e-9},
             'dropout': {'values': [0, 0]},
-            'plys': {'values': [0, 1, 2]},
+            'plys': {'values': [0, 0, 0]},
             'gamma': {'max': 1.5, 'min': 0.3},
             'num_layers': {'max': 15, 'min': 0}
         }

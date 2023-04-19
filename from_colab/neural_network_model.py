@@ -2,12 +2,9 @@ from torch.utils.data import DataLoader, TensorDataset, Dataset
 import pytorch_lightning as pl
 import torch.nn as nn
 import torch.nn.functional as F
-from pytorch_lightning.loggers.wandb import WandbLogger
-import wandb
 import torch.utils.data as data
 import torch
 from torch.optim.lr_scheduler import StepLR
-from pytorch_lightning.callbacks import EarlyStopping, LearningRateMonitor
 from utilities import *
 
 
@@ -18,7 +15,7 @@ class ChessDataset(Dataset):
         self.plys = plys  # plys ahead for prediction
 
     def __len__(self):
-        return (len(self.Y))
+        return len(self.Y)
 
     def __getitem__(self, index):
         x = torch.tensor(self.X[index, :, :]).float()
@@ -50,7 +47,7 @@ class ChessDataModule(pl.LightningDataModule):
             allX.extend(positions)
             ally.extend(target_moves)
             idx = idx + 1
-            if (idx % 100 == 0): print('\rPreprocessing Game ' + str(idx), end=" ")
+            if idx % 100 == 0: print('\rPreprocessing Game ' + str(idx), end=" ")
 
         allX = np.array(allX)
         ally = np.array(ally)
@@ -94,7 +91,7 @@ class SEBlock(nn.Module):
 class NeuralNetwork(nn.Module):
     def __init__(self, plys, num_hidden, num_layers, dropout=0.1):
         super(NeuralNetwork, self).__init__()
-        input_size = 8 * 8 * 12 * (plys + 1)  # For an 8x8 board with 12 input channels (6 white pieces, 6 black pieces)
+        input_size = 8 * 8 #* (plys + 1)  # Each board is 8 x 8 board with 12 input channels (6 white pieces, 6 black pieces)
         num_classes = 64 * 64  # From square * To square (4096 possible moves, although not all are valid)
 
         layers = []
