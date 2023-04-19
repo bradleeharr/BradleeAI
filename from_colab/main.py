@@ -7,8 +7,11 @@ def train_model():
     # Get the Data
     my_username = 'bubbakill7'
     num_games = 1
+    batch_size = 128
     if not os.path.exists(my_username+'_lichess_games.pgn'):
         download_games_to_pgn(my_username, num_games)
+    else:
+        print("Games found")
 
     # Create the early stopping callback
     early_stopping_callback = EarlyStopping(monitor="validation_loss", min_delta=0.001, patience=250, verbose=True,
@@ -20,7 +23,7 @@ def train_model():
     wandb.init(project="chess_testing_sweep")
     config = wandb.config
     wandb_logger = WandbLogger()
-    data = ChessDataModule(config=config)
+    data = ChessDataModule(config=config, batch_size=batch_size)
     model = ChessModel(config=config)
 
     wandb_logger.watch(model.net)  # show gradient
@@ -54,12 +57,12 @@ if __name__ == '__main__':
             'name': 'validation_loss'
         },
         'parameters': {
-            'num_hidden': {'max': 1500, 'min': 3},
+            'num_hidden': {'max': 150, 'min': 3},
             'lr': {'distribution': 'log_uniform_values', 'max': 2., 'min': 1e-9},
             'dropout': {'values': [0, 0]},
             'plys': {'values': [0, 1, 2]},
             'gamma': {'max': 1.5, 'min': 0.3},
-            'num_layers': {'max': 120, 'min': 0}
+            'num_layers': {'max': 15, 'min': 0}
         }
     }
 
