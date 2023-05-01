@@ -1,4 +1,5 @@
 from neural_network_model import *
+from pytorch_lightning_classes import *
 from utilities import *
 import os
 import wandb
@@ -9,15 +10,15 @@ from pytorch_lightning.callbacks import EarlyStopping, LearningRateMonitor
 def train_model():
     # Get the Data
     my_username = 'bubbakill7'
-    num_games = 1
-    batch_size = 128
-    if not os.path.exists(my_username+'_lichess_games.pgn'):
+    num_games = 100
+    batch_size = 8
+    if not os.path.exists(my_username + '_lichess_games.pgn'):
         download_games_to_pgn(my_username, num_games)
     else:
         print("Games found")
 
     # Create the early stopping callback
-    early_stopping_callback = EarlyStopping(monitor="validation_loss", min_delta=0.001, patience=550, verbose=True,
+    early_stopping_callback = EarlyStopping(monitor="validation_loss", min_delta=0.001, patience=15, verbose=True,
                                             mode="min")
 
     # Create the learning rate monitor callback
@@ -60,14 +61,19 @@ if __name__ == '__main__':
             'name': 'validation_loss'
         },
         'parameters': {
-            'num_hidden': {'max': 150, 'min': 3},
-            'lr': {'distribution': 'log_uniform_values', 'max': 2., 'min': 1e-9},
-            'dropout': {'values': [0, 0]},
-            'plys': {'values': [0, 0, 0]},
-            'gamma': {'max': 1.5, 'min': 0.3},
-            'num_layers': {'max': 15, 'min': 0}
+            'dropout': {'max': 0.8, 'min': 0.0},
+            'hidden_layer_size': {'values': [0, 0]},
+            'plys': {'max': 24, 'min': 0},
+            'num_hidden_layers': {'values': [0, 0]},
+            'lr': {'distribution': 'log_uniform_values', 'max': 2., 'min': 1e-6},
+            'gamma': {'max': 1.2, 'min': 1e-4},
+            'num_conv_blocks': {'max': 12, 'min': 2},
+            'lr_step_size': {'max': 200, 'min': 10},
+            'pooling_interval': {'max': 6, 'min': 1},
+            'weight_decay': {'max': 0.2, 'min': 0.0},
+            'scheduler_type': {'values': ['steplr', 'cycliclr', 'cosine']},
         }
     }
 
-    sweep_id = wandb.sweep(sweep_config, project="chess_sweep_8")
-    wandb.agent(sweep_id=sweep_id, function=train_model, count=500)
+    sweep_id = wandb.sweep(sweep_config, project="chess_sweep_with_plys")
+    wandb.agent(sweep_id=sweep_id, function=train_model, count=50)

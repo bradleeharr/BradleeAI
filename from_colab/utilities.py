@@ -82,7 +82,7 @@ def process_game(game, target_player, num_previous_positions):
 
         if player_to_move == target_player:
             try:
-                board_input = board_to_input_2d(board.copy(), num_previous_positions)
+                board_input = board_to_input(board.copy(), num_previous_positions)
                 positions.append(board_input)
                 target_moves.append(move_to_flat(move))
                 board.push(move)
@@ -136,9 +136,8 @@ def flat_to_move(flat_move, board):
     return move
 
 
-
 # Converts a board to a 3D array suitable for the CNN input
-"""def board_to_input(board, num_previous_positions):
+def board_to_input(board, num_previous_positions):
     pieces_order = [chess.PAWN, chess.ROOK, chess.KNIGHT, chess.BISHOP, chess.QUEEN, chess.KING]
     board_input = np.zeros((12 * (num_previous_positions + 1), 8, 8), dtype=np.float32)
 
@@ -165,7 +164,7 @@ def flat_to_move(flat_move, board):
     return board_input
 
 
-def input_to_board(board_input, num_previous_positions):
+def input_to_board(board_input, num_previous_positions=0):
     pieces_order = [chess.PAWN, chess.ROOK, chess.KNIGHT, chess.BISHOP, chess.QUEEN, chess.KING]
     board = chess.Board()
     board.clear_board()
@@ -180,4 +179,28 @@ def input_to_board(board_input, num_previous_positions):
                     square = chess.square(file, rank)
                     board.set_piece_at(square, chess.Piece(piece, chess.BLACK))
 
-    return board"""
+    return board
+
+
+# Filter out illegal moves and set to negative infinity given a legal moves mask
+def filter_illegal_moves(y_hat, legal_moves_mask):
+    y_hat_filtered = y_hat.clone()
+    y_hat_filtered[~legal_moves_mask] = float('-inf')  # Set illegal moves to negative infinity
+    return y_hat_filtered
+
+
+def get_legal_moves_mask(boards):
+    legal_moves_masks = []
+
+    for board in boards:
+        # Initialize an empty mask with the same size as the total number of possible moves
+        mask = np.zeros(chess.MAX_NB_SQUARES * chess.MAX_NB_SQUARES, dtype=bool)
+
+        # Iterate through legal moves and set the corresponding mask elements to True
+        for move in board.legal_moves:
+            index = move.from_square * chess.MAX_NB_SQUARES + move.to_square
+            mask[index] = True
+
+        legal_moves_masks.append(mask)
+
+    return legal_moves_masks

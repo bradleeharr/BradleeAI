@@ -1,4 +1,4 @@
-from torch.utils.data import DataLoader, TensorDataset, Dataset
+from torch.utils.data import DataLoader, Dataset
 import pytorch_lightning as pl
 import torch.nn as nn
 import torch.nn.functional as F
@@ -8,70 +8,8 @@ from torch.optim.lr_scheduler import StepLR
 from utilities import *
 
 
-class ChessDataset(Dataset):
-    def __init__(self, X, Y, plys):
-        self.X = X
-        self.Y = Y
-        self.plys = plys  # plys ahead for prediction
-
-    def __len__(self):
-        return len(self.Y)
-
-    def __getitem__(self, index):
-        x = torch.tensor(self.X[index, :, :]).float()
-        y = torch.tensor(self.Y[index]).long()
-        # board = input_to_board(x, self.plys)
-        # move = flat_to_move(y, board)
-        # print(board)
-        # print(move)
-        return x, y
-
-
-class ChessDataModule(pl.LightningDataModule):
-    def __init__(self, config, batch_size: int = 512):
-        super().__init__()
-        self.batch_size = batch_size
-        self.plys = config.plys
-        self.target_player = 'bubbakill7'
-        self.num_layers = config.num_layers
-
-    def setup(self, stage: str):
-        # download_games_to_pgn(self.target_player)
-        games = load_games_from_pgn(self.target_player + '_lichess_games.pgn')
-        allX = []
-        ally = []
-
-        idx = 0
-        for game in games:
-            positions, target_moves = process_game(game, self.target_player, num_previous_positions=self.plys)
-            allX.extend(positions)
-            ally.extend(target_moves)
-            idx = idx + 1
-            if idx % 100 == 0: print('\rPreprocessing Game ' + str(idx), end=" ")
-
-        allX = np.array(allX)
-        ally = np.array(ally)
-
-        chessData = ChessDataset(allX, ally, plys=self.plys)
-        train_set_size = int(len(chessData) * 0.7)
-        valid_set_size = int(len(chessData) * 0.15)
-        test_set_size = len(chessData) - train_set_size - valid_set_size
-        self.train_set, self.valid_set, self.test_set = data.random_split(chessData, [train_set_size, valid_set_size,
-                                                                                      test_set_size], \
-                                                                          generator=torch.Generator().manual_seed(42))
-
-    def train_dataloader(self):
-        return DataLoader(self.train_set, batch_size=self.batch_size, shuffle=True, num_workers=16)  # input:(20,5), label:1
-
-    def val_dataloader(self):
-        return DataLoader(self.valid_set, batch_size=self.batch_size, shuffle=False, num_workers=16)
-
-    def test_dataloader(self):
-        return DataLoader(self.test_set, batch_size=self.batch_size, shuffle=False, num_workers=16)
-
-
 class SEBlock(nn.Module):
-    def __init__(self, in_channels, reduction_ratio=16):
+    def __init__(self, in_channels, reduction_ratio=2):
         super(SEBlock, self).__init__()
         self.avg_pool = nn.AdaptiveAvgPool2d(1)
         self.fc = nn.Sequential(
@@ -88,61 +26,96 @@ class SEBlock(nn.Module):
         return x * y.expand_as(x)
 
 
-class NeuralNetwork(nn.Module):
-    def __init__(self, plys, num_hidden, num_layers, dropout=0.1):
-        super(NeuralNetwork, self).__init__()
-        input_size = 8 * 8 #* (plys + 1)  # Each board is 8 x 8 board with 12 input channels (6 white pieces, 6 black pieces)
-        num_classes = 64 * 64  # From square * To square (4096 possible moves, although not all are valid)
-
-        layers = []
-        for i in range(num_layers):
-            layers.append(torch.nn.Linear(num_hidden, num_hidden))
-            layers.append(torch.nn.ReLU())
-        self.hidden_layers = torch.nn.Sequential(*layers)
-
-        self.fc1 = nn.Linear(input_size, num_hidden)
-        self.fc3 = nn.Linear(num_hidden, num_classes)
-        self.softmax = nn.Softmax(dim=1)
+class SqueezeExcitation(nn.Module):
+    def __init__(self, channels, reduction_ratio=2):
+        super(SqueezeExcitation, self).__init__()
+        self.avg_pool = nn.AdaptiveAvgPool2d(1)
+        self.fc1 = nn.Linear(channels, channels // reduction_ratio)
+        self.relu = nn.ReLU()
+        self.fc2 = nn.Linear(channels // reduction_ratio, channels)
+        self.sigmoid = nn.Sigmoid()
 
     def forward(self, x):
-        x = x.view(x.size(0), -1)  # Flatten the input tensor
-        x = F.relu(self.fc1(x))
-        x = self.hidden_layers(x)
-        x = self.fc3(x)
-        x = self.softmax(x)
+        batch_size, channels, _, _ = x.size()
+        y = self.avg_pool(x).view(batch_size, channels)
+        y = self.fc1(y)
+        y = self.relu(y)
+        y = self.fc2(y)
+        y = self.sigmoid(y).view(batch_size, channels, 1, 1)
+        return x * y
+
+
+class ResidualBlock(nn.Module):
+    def __init__(self, in_channels):
+        super(ResidualBlock, self).__init__()
+        self.conv1 = nn.Conv2d(in_channels, in_channels, kernel_size=3, padding=1)
+        self.bn1 = nn.BatchNorm2d(in_channels)
+        self.relu1 = nn.ReLU()
+        self.conv2 = nn.Conv2d(in_channels, in_channels, kernel_size=3, padding=1)
+        self.bn2 = nn.BatchNorm2d(in_channels)
+        self.relu2 = nn.ReLU()
+
+    def forward(self, x):
+        identity = x
+        out = self.conv1(x)
+        out = self.bn1(out)
+        out = self.relu1(out)
+        out = self.conv2(out)
+        out = self.bn2(out)
+        out += identity
+        out = self.relu2(out)
+        return out
+
+
+class VariableConvNet(nn.Module):
+    def __init__(self, input_channels, num_classes, num_conv_blocks, pooling_interval, hidden_layer_size, dropout):
+        super(VariableConvNet, self).__init__()
+
+        # Create a list of convolutional layers with ReLU activations and selective Max Pooling layers
+        conv_layers = []
+        in_channels = input_channels
+        self.dropout = nn.Dropout(dropout);
+
+        for i in range(num_conv_blocks):
+            conv_layers.append(ResidualBlock(in_channels))
+            if i % 2 == 1:
+                conv_layers.append(SqueezeExcitation(in_channels))  # Add the SE block
+
+        self.conv_layers = nn.ModuleList(conv_layers)
+
+        # Flatten the output and add fully connected layers
+        self.flatten = nn.Flatten()
+        self.fc1 = nn.Linear(in_channels * 64, hidden_layer_size)
+        self.relu = nn.ReLU()
+        self.fc2 = nn.Linear(hidden_layer_size, num_classes)
+
+    def forward(self, x):
+        # Apply the convolutional layers
+        for layer in self.conv_layers:
+            x = layer(x)
+            x = self.dropout(x)
+
+        # Apply the fully connected layers
+        x = self.flatten(x)
+        x = self.fc1(x)
+        x = self.relu(x)
+        x = self.fc2(x)
+
         return x
 
 
-class ChessModel(pl.LightningModule):
-    def __init__(self, config):
-        super().__init__()
-        self.net = NeuralNetwork(plys=config.plys, num_hidden=config.num_hidden, dropout=config.dropout,
-                                 num_layers=config.num_layers)
-        self.lr = config.lr
-        self.gamma = config.gamma
+class NeuralNetwork(nn.Module):
+    def __init__(self, plys, hidden_layer_size, num_hidden_layers, num_conv_blocks, pooling_interval, dropout=0):
+        super(NeuralNetwork, self).__init__()
+        # Each board is 8 x 8 board with 12 input channels (6 white pieces, 6 black pieces)
+        in_channels = 12 * (plys + 1)
+        num_classes = 64 * 64  # From square * To square (4096 possible moves, although not all are valid)
 
-    def training_step(self, batch, batch_idx):
-        x, y = batch
-        y_hat = self.net(x)
-        loss = F.cross_entropy(y_hat, y)
-        self.log("train_loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
-        return loss
+        self.convNet = VariableConvNet(input_channels=in_channels, num_classes=num_classes,
+                                       num_conv_blocks=num_conv_blocks,
+                                       hidden_layer_size=hidden_layer_size, pooling_interval=pooling_interval,
+                                       dropout=dropout)
 
-    def validation_step(self, batch, batch_idx):
-        x, y = batch
-        y_hat = self.net(x)
-        loss = F.cross_entropy(y_hat, y)
-        self.log('validation_loss', loss)
-        return loss
-
-    def test_step(self, batch, batch_idx):
-        # this is the test loop
-        x, y = batch
-        y_hat = self.net(x)
-        test_loss = F.cross_entropy(y_hat, y)
-        self.log("test_loss", test_loss)
-
-    def configure_optimizers(self):
-        optimizer = torch.optim.Adam(self.parameters(), lr=self.lr)
-        scheduler = StepLR(optimizer, step_size=50, gamma=self.gamma)  # Adjust step_size and gamma as needed
-        return {"optimizer": optimizer, "lr_scheduler": scheduler, "monitor": "val_loss"}
+    def forward(self, x):
+        x = self.convNet(x)
+        return x

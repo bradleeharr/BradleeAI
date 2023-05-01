@@ -1,0 +1,8 @@
+.idea/vcs.xml
+bradleeharrison_lichess_games.pgn
+from_colab/__pycache__/
+from_colab/bubbakill7_lichess_games.pgn
+from_colab/lightning_logs/
+from_colab/wandb/
+maia_chess_backend/
+move_prediction/
