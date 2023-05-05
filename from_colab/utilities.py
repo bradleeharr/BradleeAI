@@ -82,7 +82,7 @@ def process_game(game, target_player, num_previous_positions):
 
         if player_to_move == target_player:
             try:
-                board_input = board_to_input(board.copy(), num_previous_positions, board.turn)
+                board_input = board_to_input(board.copy(), num_previous_positions) # board.turn
                 positions.append(board_input)
                 target_moves.append(move_to_flat(move))
                 board.push(move)

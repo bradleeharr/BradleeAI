@@ -1,3 +1,5 @@
+import logging
+
 from torch.utils.data import DataLoader, Dataset
 import pytorch_lightning as pl
 import torch.nn as nn
@@ -104,23 +106,27 @@ class ChessModel(pl.LightningModule):
         # this is the test loop
         x, y = batch
         y_hat = self.net(x)
-
-        boards = []
-        for board in x:
-            boards.append(input_to_board(board))
-
-        legal_moves_mask = get_legal_moves_mask(boards);
-        legal_moves_mask_tensor = torch.tensor(legal_moves_mask, dtype=torch.bool, device=x.device)
-        y_hat_filtered = filter_illegal_moves(y_hat, legal_moves_mask_tensor)
-
-        _, predicted_move_indices = torch.max(y_hat_filtered,dim=1)
-        accuracy = torch.mean((predicted_move_indices == y).float())
-        for idx, move_index in enumerate(predicted_move_indices):
-            print("predicted test move: ", flat_to_move(move_index, boards[idx]), end=' ')
-            print("actual test move: ", flat_to_move(y[idx], boards[idx]))
         test_loss = F.cross_entropy(y_hat, y)
         self.log("test_loss", test_loss)
-        self.log("move_prediction_accuracy", accuracy)
+        try:
+            boards = []
+            for board in x:
+                boards.append(input_to_board(board))
+
+            legal_moves_mask = get_legal_moves_mask(boards);
+            legal_moves_mask_tensor = torch.tensor(legal_moves_mask, dtype=torch.bool, device=x.device)
+            count = torch.count_nonzero(legal_moves_mask_tensor)
+            y_hat_filtered = filter_illegal_moves(y_hat, legal_moves_mask_tensor)
+
+            _, predicted_move_indices = torch.max(y_hat_filtered,dim=1)
+            accuracy = torch.mean((predicted_move_indices == y).float())
+            for idx, move_index in enumerate(predicted_move_indices):
+                print("predicted test move: ", flat_to_move(move_index, boards[idx]), end=' ')
+                print("actual test move: " + str(flat_to_move(y[idx], boards[idx])) + ' On board ' + str(boards[idx]))
+            self.log("move_prediction_accuracy", accuracy)
+        except Exception as e:
+            logging.error('error happened during move prediction',exc_info=e)
+
 
     def configure_optimizers(self):
         #optimizer = torch.optim.Adam(self.parameters(), lr=self.lr, weight_decay=self.weight_decay)
