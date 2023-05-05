@@ -64,13 +64,13 @@ class ChessDataModule(pl.LightningDataModule):
                                                                           generator=torch.Generator().manual_seed(42))
 
     def train_dataloader(self):
-        return DataLoader(self.train_set, batch_size=self.batch_size, shuffle=True, num_workers=16)
+        return DataLoader(self.train_set, batch_size=self.batch_size, shuffle=True)
 
     def val_dataloader(self):
-        return DataLoader(self.valid_set, batch_size=self.batch_size, shuffle=False, num_workers=16)
+        return DataLoader(self.valid_set, batch_size=self.batch_size, shuffle=False)
 
     def test_dataloader(self):
-        return DataLoader(self.test_set, batch_size=self.batch_size, shuffle=False, num_workers=16)
+        return DataLoader(self.test_set, batch_size=self.batch_size, shuffle=False)
 
 
 class ChessModel(pl.LightningModule):
@@ -83,6 +83,8 @@ class ChessModel(pl.LightningModule):
         self.gamma = config.gamma
         self.lr_step_size = config.lr_step_size
         self.weight_decay = config.weight_decay
+        self.scheduler_type = config.scheduler_type
+        self.momentum = config.momentum
 
     def training_step(self, batch, batch_idx):
         x, y = batch
@@ -113,13 +115,16 @@ class ChessModel(pl.LightningModule):
 
         _, predicted_move_indices = torch.max(y_hat_filtered,dim=1)
         accuracy = torch.mean((predicted_move_indices == y).float())
-
+        for idx, move_index in enumerate(predicted_move_indices):
+            print("predicted test move: ", flat_to_move(move_index, boards[idx]), end=' ')
+            print("actual test move: ", flat_to_move(y[idx], boards[idx]))
         test_loss = F.cross_entropy(y_hat, y)
         self.log("test_loss", test_loss)
         self.log("move_prediction_accuracy", accuracy)
 
     def configure_optimizers(self):
-        optimizer = torch.optim.Adam(self.parameters(), lr=self.lr, weight_decay=self.weight_decay)
+        #optimizer = torch.optim.Adam(self.parameters(), lr=self.lr, weight_decay=self.weight_decay)
+        optimizer = torch.optim.SGD(self.parameters(), lr=self.lr, weight_decay=self.weight_decay, momentum=self.momentum)
         if self.scheduler_type == 'steplr':
             scheduler = StepLR(optimizer, step_size=self.lr_step_size, gamma=self.gamma)
         elif self.scheduler_type == 'cycliclr':

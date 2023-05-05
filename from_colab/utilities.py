@@ -82,7 +82,7 @@ def process_game(game, target_player, num_previous_positions):
 
         if player_to_move == target_player:
             try:
-                board_input = board_to_input(board.copy(), num_previous_positions)
+                board_input = board_to_input(board.copy(), num_previous_positions, board.turn)
                 positions.append(board_input)
                 target_moves.append(move_to_flat(move))
                 board.push(move)
@@ -194,11 +194,11 @@ def get_legal_moves_mask(boards):
 
     for board in boards:
         # Initialize an empty mask with the same size as the total number of possible moves
-        mask = np.zeros(chess.MAX_NB_SQUARES * chess.MAX_NB_SQUARES, dtype=bool)
+        mask = np.zeros(64 * 64, dtype=bool)
 
         # Iterate through legal moves and set the corresponding mask elements to True
         for move in board.legal_moves:
-            index = move.from_square * chess.MAX_NB_SQUARES + move.to_square
+            index = move.from_square * 64 + move.to_square
             mask[index] = True
 
         legal_moves_masks.append(mask)
