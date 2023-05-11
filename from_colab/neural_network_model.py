@@ -1,3 +1,4 @@
+import torchvision as torchvision
 from torch.utils.data import DataLoader, Dataset
 import pytorch_lightning as pl
 import torch.nn as nn
@@ -46,13 +47,14 @@ class SqueezeExcitation(nn.Module):
 
 
 class ResidualBlock(nn.Module):
-    def __init__(self, in_channels):
+    def __init__(self, in_channels, squeeze_factor=2):
         super(ResidualBlock, self).__init__()
         self.conv1 = nn.Conv2d(in_channels, in_channels, kernel_size=3, padding=1)
         self.bn1 = nn.BatchNorm2d(in_channels)
         self.relu1 = nn.ReLU()
         self.conv2 = nn.Conv2d(in_channels, in_channels, kernel_size=3, padding=1)
         self.bn2 = nn.BatchNorm2d(in_channels)
+        self.se = torchvision.ops.SqueezeExcitation(in_channels, in_channels//squeeze_factor)
         self.relu2 = nn.ReLU()
 
     def forward(self, x):
@@ -62,24 +64,27 @@ class ResidualBlock(nn.Module):
         out = self.relu1(out)
         out = self.conv2(out)
         out = self.bn2(out)
+        out = self.se(out)
         out += identity
         out = self.relu2(out)
         return out
 
 
 class VariableConvNet(nn.Module):
-    def __init__(self, input_channels, num_classes, num_conv_blocks, pooling_interval, hidden_layer_size, dropout):
+    def __init__(self, input_channels, num_classes, num_conv_blocks, pooling_interval, hidden_layer_size, dropout, squeeze_factor):
         super(VariableConvNet, self).__init__()
-
-        # Create a list of convolutional layers with ReLU activations and selective Max Pooling layers
-        conv_layers = []
         in_channels = input_channels
-        self.dropout = nn.Dropout(dropout);
+        self.dropout = nn.Dropout(dropout)
 
+        # Create an input convolutional layer
+        self.conv0 = nn.Conv2d(in_channels, in_channels, kernel_size=3, padding=1)
+        self.bn0 = nn.BatchNorm2d(in_channels)
+        self.relu0 = nn.ReLU()
+        conv_layers = []
+
+        # Create a list of convolutional blocks like Maia model
         for i in range(num_conv_blocks):
-            conv_layers.append(ResidualBlock(in_channels))
-            if i % 2 == 1:
-                conv_layers.append(SqueezeExcitation(in_channels))  # Add the SE block
+            conv_layers.append(ResidualBlock(in_channels, squeeze_factor))
 
         self.conv_layers = nn.ModuleList(conv_layers)
 
@@ -90,7 +95,12 @@ class VariableConvNet(nn.Module):
         self.fc2 = nn.Linear(hidden_layer_size, num_classes)
 
     def forward(self, x):
-        # Apply the convolutional layers
+        # Apply the input convolutional layer
+        x = self.conv0(x)
+        x = self.bn0(x)
+        x = self.relu(x)
+
+        # Apply the residual convolutional blocks
         for layer in self.conv_layers:
             x = layer(x)
             x = self.dropout(x)
@@ -105,7 +115,7 @@ class VariableConvNet(nn.Module):
 
 
 class NeuralNetwork(nn.Module):
-    def __init__(self, plys, hidden_layer_size, num_hidden_layers, num_conv_blocks, pooling_interval, dropout=0):
+    def __init__(self, plys, hidden_layer_size, num_conv_blocks, pooling_interval, dropout=0, squeeze_factor=2):
         super(NeuralNetwork, self).__init__()
         # Each board is 8 x 8 board with 12 input channels (6 white pieces, 6 black pieces)
         in_channels = 12 * (plys + 1)
@@ -114,7 +124,8 @@ class NeuralNetwork(nn.Module):
         self.convNet = VariableConvNet(input_channels=in_channels, num_classes=num_classes,
                                        num_conv_blocks=num_conv_blocks,
                                        hidden_layer_size=hidden_layer_size, pooling_interval=pooling_interval,
-                                       dropout=dropout)
+                                       dropout=dropout,
+                                       squeeze_factor=squeeze_factor)
 
     def forward(self, x):
         x = self.convNet(x)

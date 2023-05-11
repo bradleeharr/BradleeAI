@@ -7,10 +7,10 @@ import chess.pgn
 
 # Download lichess games for a particular user to a pgn file
 def download_games_to_pgn(player_username, max_games=15):
-    pgn = lichesspy.api.user_games(player_username, max=max_games, format=PGN, evals=True)
+    pgn = lichesspy.api.user_games(player_username, max=max_games, format=PGN, evals=False)
     idx = 0
     for game in pgn:
-        with open(player_username + '_lichess_games.pgn', 'a') as f:
+        with open(player_username + '_lichess_games.pgn', 'a', encoding='utf-8') as f:
             f.write(game)
         idx += 1
     print(str(idx) + " Games downloaded")
@@ -20,17 +20,22 @@ def download_games_to_pgn(player_username, max_games=15):
 # Loads the games from a pgn file and places them into an array
 def load_games_from_pgn(pgn_file):
     games = []
-    with open(pgn_file) as f:
+    idx = 0
+    with open(pgn_file, encoding='utf-8') as f:
         while True:
             try:
+                idx += 1
                 game = chess.pgn.read_game(f)
-                # removes empty and  non-standard games
+                # removes empty and non-standard games
                 # (Variants like Antichess or Atomic Chess)
-                if game is None or game.headers["Variant"] != 'Standard':
+                if game is None:
                     break
+                if game.headers["Variant"] != 'Standard':
+                    continue
                 games.append(game)
+                print('\rLoading Game ' + str(idx), end='... ')
             except Exception as e:
-                print(f"Error reading PGN: {e}")
+                print(f"\nError reading PGN: {e}")
                 break
     print(str(len(games)) + ' Games loaded.')
     return games
@@ -72,8 +77,15 @@ def process_game(game, target_player, num_previous_positions):
     positions = []
     target_moves = []
 
+    move_count = 0
     for move_uci in game.mainline():
         move = chess.Move.from_uci(move_uci.uci())
+
+        # Skip the first 5 moves
+        if move_count < 5:
+            board.push(move)
+            move_count += 1
+            continue
 
         if board.turn == chess.WHITE:
             player_to_move = game.headers["White"]
