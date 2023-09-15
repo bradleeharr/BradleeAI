@@ -2,7 +2,7 @@
 
 # 1 | Introduction
 Computer chess engines, powered by neural networks and reinforcement learning, excel in game solutions. However, many suggest moves distinct from human choices due to their computational accuracy. 
-This disparity can hinder human learning from such engines. An exemplar of human-like chess AI is [Maia Chess](https://maiachess.com/) [1] [2]. My project's objective is to use deep learning to mimic personal chess styles, emphasizing capturing human decision-making in rapid games.
+This disparity can hinder human learning from such engines. An exemplar of human-like chess AI is [Maia Chess](https://maiachess.com/). My project's objective is to use deep learning to mimic personal chess styles, emphasizing capturing human decision-making in rapid games.
 
 # 2 | Data
 I focused on personal game datasets to ensure unique results. The dataset (~2,000 games) is optimized for an AMD Ryzen CPU without GPU acceleration. 
