@@ -10,6 +10,7 @@ It comprises 1,633 Bullet, 165 Blitz, and 244 Rapid games. Emphasizing Bullet ga
 **3.0 Board Features**:
 
  8x8x12 map representation, where each 8x8 channel denotes a piece (12 total). A '1' indicates the presence of a piece, and '0' its absence
+ 
 **3.1 Move Features**:
 
  Moves were translated from the Universal Chess Interface to a numerical system, leading to 4096 potential classes.
@@ -17,6 +18,7 @@ It comprises 1,633 Bullet, 165 Blitz, and 244 Rapid games. Emphasizing Bullet ga
 **3.2 Random Valid Move Model**:
 
 A baseline model, achieving 3.1-3.6% accuracy through random move selection.
+
 # 4 | Base Convolutional Model:
 
 ![image](https://github.com/bradleeharr/BradleeAI/assets/56418392/ec95dcc9-ee64-4d30-9167-0b18f78e52ca)
