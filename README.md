@@ -35,5 +35,5 @@ The best model had losses of 0.9274 (training), 4.616 (validation), and 4.696 (t
 # 5 | Residual Model
 ![image](https://github.com/bradleeharr/BradleeAI/assets/56418392/81102fdc-193e-4ccc-a161-fffa3956efb1)
 
-After hyperparameter adjustments, this model had a top move prediction accuracy of 10.21%. Though inferior to the convolutional model, it outperforms the random baseline. Its intricate structure, combined with a smaller dataset, poses training challenges.
+After hyperparameter adjustments, this model had a top move prediction accuracy of 10.21%. Though inferior to the convolutional model, it outperforms the random baseline. Overall, I am using a small model with a small dataset, which poses training challenges. 
 
